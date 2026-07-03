@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Click Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+        }
+
+        h1 {
+            color: #fff;
+            font-size: 2.5em;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .scoreboard {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 40px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .score-label {
+            color: #667eea;
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .score {
+            font-size: 3.5em;
+            color: #764ba2;
+            font-weight: 700;
+        }
+
+        .click-button {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            font-size: 3em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.1s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .click-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .click-button:active {
+            transform: scale(0.95);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .reset-button {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            border-radius: 25px;
+            color: #764ba2;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .reset-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .reset-button:active {
+            transform: translateY(0);
+        }
+
+        .click-effect {
+            position: fixed;
+            pointer-events: none;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+            animation: float-up 1s ease-out forwards;
+        }
+
+        @keyframes float-up {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-50px) scale(1.2);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 CLICK GAME 🎮</h1>
+
+        <div class="scoreboard">
+            <div class="score-label">Pontos</div>
+            <div class="score" id="score">0</div>
+        </div>
+
+        <button class="click-button" id="clickBtn">+1</button>
+
+        <button class="reset-button" id="resetBtn">Resetar</button>
+    </div>
+
+    <script>
+        let score = 0;
+        const scoreDisplay = document.getElementById('score');
+        const clickBtn = document.getElementById('clickBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        // Recuperar pontuação do localStorage
+        window.addEventListener('load', () => {
+            const savedScore = localStorage.getItem('clickGameScore');
+            if (savedScore) {
+                score = parseInt(savedScore);
+                scoreDisplay.textContent = score;
+            }
+        });
+
+        // Adicionar ponto ao clicar
+        clickBtn.addEventListener('click', (e) => {
+            score++;
+            scoreDisplay.textContent = score;
+            localStorage.setItem('clickGameScore', score);
+
+            // Efeito visual de click
+            createClickEffect(e);
+        });
+
+        // Resetar pontuação
+        resetBtn.addEventListener('click', () => {
+            score = 0;
+            scoreDisplay.textContent = score;
+            localStorage.removeItem('clickGameScore');
+        });
+
+        // Criar efeito visual de +1 flutuante
+        function createClickEffect(event) {
+            const effect = document.createElement('div');
+            effect.className = 'click-effect';
+            effect.textContent = '+1';
+            effect.style.left = event.pageX + 'px';
+            effect.style.top = event.pageY + 'px';
+            
+            document.body.appendChild(effect);
+            
+            setTimeout(() => {
+                effect.remove();
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
