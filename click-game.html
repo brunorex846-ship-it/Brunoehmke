@@ -180,8 +180,6 @@
         localStorage.setItem('clickGameResetPercentage', resetPercentage);
         return;
     }
-
-    // Aumenta a chance em 1%
     resetPercentage++;
 
     scoreDisplay.textContent = score;
@@ -195,8 +193,7 @@
 
             createClickEffect(e);
         });
-
-        // Resetar pontuação
+        
         resetBtn.addEventListener('click', () => {
             score = 0;
             resetPercentage = 1;
@@ -205,8 +202,7 @@
             localStorage.removeItem('clickGameScore');
             localStorage.removeItem('clickGameResetPercentage');
         });
-
-        // Criar efeito visual de +1% flutuante
+        
         function createClickEffect(event) {
             const effect = document.createElement('div');
             effect.className = 'click-effect';
