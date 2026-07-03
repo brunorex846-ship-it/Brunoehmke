@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Click Game 50x50</title>
+    <title>Click Game</title>
     <style>
         * {
             margin: 0;
@@ -25,8 +25,6 @@
             flex-direction: column;
             align-items: center;
             gap: 40px;
-            width: 90%;
-            max-width: 600px;
         }
 
         h1 {
@@ -35,56 +33,37 @@
             text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         }
 
-        .game-board {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            width: 100%;
-        }
-
-        .player-card {
+        .scoreboard {
             background: rgba(255, 255, 255, 0.95);
-            padding: 30px;
+            padding: 20px 40px;
             border-radius: 15px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
             text-align: center;
         }
 
-        .player-card.player1 {
-            border-top: 5px solid #667eea;
-        }
-
-        .player-card.player2 {
-            border-top: 5px solid #764ba2;
-        }
-
-        .player-name {
-            color: #333;
-            font-size: 1.3em;
-            font-weight: 700;
-            margin-bottom: 15px;
+        .score-label {
+            color: #667eea;
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 10px;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
 
-        .percentage {
-            font-size: 3em;
+        .score {
+            font-size: 3.5em;
+            color: #764ba2;
             font-weight: 700;
-            margin-bottom: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
 
         .click-button {
-            width: 120px;
-            height: 120px;
+            width: 150px;
+            height: 150px;
             border-radius: 50%;
             border: none;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: #fff;
-            font-size: 2.5em;
+            font-size: 3em;
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
@@ -92,7 +71,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto;
         }
 
         .click-button:hover {
@@ -119,7 +97,6 @@
             transition: all 0.2s ease;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            width: 100%;
         }
 
         .reset-button:hover {
@@ -150,145 +127,80 @@
                 transform: translateY(-50px) scale(1.2);
             }
         }
-
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: #e0e0e0;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-top: 15px;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            width: 0%;
-            transition: width 0.3s ease;
-            border-radius: 10px;
-        }
-
-        .player1 .progress-fill {
-            background: #667eea;
-        }
-
-        .player2 .progress-fill {
-            background: #764ba2;
-        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎮 CLICK 50x50 🎮</h1>
-
-        <div class="game-board">
-            <!-- Player 1 -->
-            <div class="player-card player1">
-                <div class="player-name">Jogador 1</div>
-                <div class="percentage" id="percentage1">50.00%</div>
-                <button class="click-button" id="clickBtn1">+1%</button>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressBar1" style="width: 50%;"></div>
-                </div>
-            </div>
-
-            <!-- Player 2 -->
-            <div class="player-card player2">
-                <div class="player-name">Jogador 2</div>
-                <div class="percentage" id="percentage2">50.00%</div>
-                <button class="click-button" id="clickBtn2">+1%</button>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressBar2" style="width: 50%;"></div>
-                </div>
-            </div>
+        <h1>🎮 CLICK GAME 🎮</h1>
+        
+        <div class="scoreboard">
+            <div class="score-label">Pontos</div>
+            <div class="score" id="score">0</div>
         </div>
 
-        <button class="reset-button" id="resetBtn">🔄 Resetar Jogo</button>
+        <button class="click-button" id="clickBtn">+1%</button>
+
+        <button class="reset-button" id="resetBtn">Reset 1%</button>
     </div>
 
     <script>
-        let player1Score = 50;
-        let player2Score = 50;
-
-        const percentage1Display = document.getElementById('percentage1');
-        const percentage2Display = document.getElementById('percentage2');
-        const progressBar1 = document.getElementById('progressBar1');
-        const progressBar2 = document.getElementById('progressBar2');
-
-        const clickBtn1 = document.getElementById('clickBtn1');
-        const clickBtn2 = document.getElementById('clickBtn2');
+        let score = 0;
+        let resetPercentage = 1;
+        const scoreDisplay = document.getElementById('score');
+        const clickBtn = document.getElementById('clickBtn');
         const resetBtn = document.getElementById('resetBtn');
 
-        // Recuperar pontuação do localStorage
+        // Recuperar dados do localStorage
         window.addEventListener('load', () => {
-            const savedPlayer1 = localStorage.getItem('clickGame50Player1');
-            const savedPlayer2 = localStorage.getItem('clickGame50Player2');
+            const savedScore = localStorage.getItem('clickGameScore');
+            const savedResetPercentage = localStorage.getItem('clickGameResetPercentage');
             
-            if (savedPlayer1 !== null && savedPlayer2 !== null) {
-                player1Score = parseFloat(savedPlayer1);
-                player2Score = parseFloat(savedPlayer2);
+            if (savedScore) {
+                score = parseFloat(savedScore);
+                scoreDisplay.textContent = score.toFixed(2);
             }
-            
-            updateDisplay();
+            if (savedResetPercentage) {
+                resetPercentage = parseInt(savedResetPercentage);
+                resetBtn.textContent = `Reset ${resetPercentage}%`;
+            }
         });
 
-        // Função para calcular e aumentar 1% da pontuação
-        function increaseScore(isPlayer1, event) {
-            if (isPlayer1) {
-                const increase = player1Score * 0.01;
-                player1Score += increase;
+        // Adicionar ponto ao clicar (aumenta 1% do valor atual)
+        clickBtn.addEventListener('click', (e) => {
+            if (score === 0) {
+                score = 1;
             } else {
-                const increase = player2Score * 0.01;
-                player2Score += increase;
+                score += score * 0.01;
             }
-
-            // Normalizar para manter total em 100%
-            const total = player1Score + player2Score;
-            player1Score = (player1Score / total) * 100;
-            player2Score = (player2Score / total) * 100;
-
-            localStorage.setItem('clickGame50Player1', player1Score);
-            localStorage.setItem('clickGame50Player2', player2Score);
-
-            createClickEffect(event, isPlayer1);
-            updateDisplay();
-        }
-
-        // Atualizar display
-        function updateDisplay() {
-            percentage1Display.textContent = player1Score.toFixed(2) + '%';
-            percentage2Display.textContent = player2Score.toFixed(2) + '%';
             
-            progressBar1.style.width = player1Score + '%';
-            progressBar2.style.width = player2Score + '%';
-        }
+            resetPercentage++;
+            
+            scoreDisplay.textContent = score.toFixed(2);
+            resetBtn.textContent = `Reset ${resetPercentage}%`;
+            
+            localStorage.setItem('clickGameScore', score);
+            localStorage.setItem('clickGameResetPercentage', resetPercentage);
 
-        // Click listeners
-        clickBtn1.addEventListener('click', (e) => {
-            increaseScore(true, e);
+            createClickEffect(e);
         });
 
-        clickBtn2.addEventListener('click', (e) => {
-            increaseScore(false, e);
-        });
-
-        // Resetar jogo
+        // Resetar pontuação
         resetBtn.addEventListener('click', () => {
-            player1Score = 50;
-            player2Score = 50;
-            localStorage.removeItem('clickGame50Player1');
-            localStorage.removeItem('clickGame50Player2');
-            updateDisplay();
+            score = 0;
+            resetPercentage = 1;
+            scoreDisplay.textContent = score;
+            resetBtn.textContent = `Reset ${resetPercentage}%`;
+            localStorage.removeItem('clickGameScore');
+            localStorage.removeItem('clickGameResetPercentage');
         });
 
-        // Criar efeito visual de +1%
-        function createClickEffect(e, isPlayer1) {
+        // Criar efeito visual de +1% flutuante
+        function createClickEffect(event) {
             const effect = document.createElement('div');
             effect.className = 'click-effect';
             effect.textContent = '+1%';
-            effect.style.left = e.pageX + 'px';
-            effect.style.top = e.pageY + 'px';
-            effect.style.color = isPlayer1 ? '#667eea' : '#764ba2';
+            effect.style.left = event.pageX + 'px';
+            effect.style.top = event.pageY + 'px';
             
             document.body.appendChild(effect);
             
