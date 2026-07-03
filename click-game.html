@@ -161,7 +161,7 @@
             }
             if (savedResetPercentage) {
                 resetPercentage = parseInt(savedResetPercentage);
-                resetBtn.textContent = `Reset {reset};
+                resetBtn.textContent = "Reset";
             }
         });
 
@@ -172,7 +172,7 @@
             resetPercentage++;
             
             scoreDisplay.textContent = score.toFixed(2);
-            resetBtn.textContent = `Reset ${resetPercentage}%`;
+            resetBtn.textContent = `Reset {reset}`;
             
             localStorage.setItem('clickGameScore', score);
             localStorage.setItem('clickGameResetPercentage', resetPercentage);
