@@ -165,31 +165,33 @@
             }
         });
 
-        // Adicionar ponto ao clicar (aumenta 1% do valor atual)
-        clickBtn.addEventListener('click', (e) => {
-            clickBtn.addEventListener('click', (e) => {
+      clickBtn.addEventListener('click', (e) => {
     score += 1;
 
-    // Sorteia de 0 a 100
-    if (Math.random() * 100 < resetChance) {
-        alert(`RESET! Chance era ${resetChance}%`);
+    // Verifica se ocorreu reset aleatório
+    if (Math.random() * 100 < resetPercentage) {
+        alert(`RESET! Chance era ${resetPercentage}%`);
 
         score = 0;
-        resetChance = 1;
+        resetPercentage = 0;
 
         scoreDisplay.textContent = score;
-        localStorage.removeItem('clickGameScore');
-        localStorage.removeItem('clickGameResetChance');
+        localStorage.setItem('clickGameScore', score);
+        localStorage.setItem('clickGameResetPercentage', resetPercentage);
         return;
-           score += 1;
-            
-            resetPercentage++;
-            
-            scoreDisplay.textContent = score.toFixed(2);
-            resetBtn.textContent = `Reset`;
-            
-            localStorage.setItem('clickGameScore', score);
-            localStorage.setItem('clickGameResetPercentage', resetPercentage);
+    }
+
+    // Aumenta a chance em 1%
+    resetPercentage++;
+
+    scoreDisplay.textContent = score;
+    resetBtn.textContent = `Reset ${resetPercentage}%`;
+
+    localStorage.setItem('clickGameScore', score);
+    localStorage.setItem('clickGameResetPercentage', resetPercentage);
+
+    createClickEffect(e);
+});
 
             createClickEffect(e);
         });
