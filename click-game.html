@@ -165,10 +165,9 @@
             }
         });
 
-      clickBtn.addEventListener('click', (e) => {
+clickBtn.addEventListener('click', (e) => {
     score += 1;
 
-    // Verifica se ocorreu reset aleatório
     if (Math.random() * 100 < resetPercentage) {
         alert(`RESET! Chance era ${resetPercentage}%`);
 
@@ -180,6 +179,7 @@
         localStorage.setItem('clickGameResetPercentage', resetPercentage);
         return;
     }
+
     resetPercentage++;
 
     scoreDisplay.textContent = score;
