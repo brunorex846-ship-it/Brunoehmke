@@ -167,6 +167,20 @@
 
         // Adicionar ponto ao clicar (aumenta 1% do valor atual)
         clickBtn.addEventListener('click', (e) => {
+            clickBtn.addEventListener('click', (e) => {
+    score += 1;
+
+    // Sorteia de 0 a 100
+    if (Math.random() * 100 < resetChance) {
+        alert(`RESET! Chance era ${resetChance}%`);
+
+        score = 0;
+        resetChance = 1;
+
+        scoreDisplay.textContent = score;
+        localStorage.removeItem('clickGameScore');
+        localStorage.removeItem('clickGameResetChance');
+        return;
            score += 1;
             
             resetPercentage++;
