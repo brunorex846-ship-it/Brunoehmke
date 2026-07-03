@@ -138,9 +138,9 @@
             <div class="score" id="score">0</div>
         </div>
 
-        <button class="click-button" id="clickBtn">+1%</button>
+        <button class="click-button" id="clickBtn">+1</button>
 
-        <button class="reset-button" id="resetBtn">Reset 1%</button>
+        <button class="reset-button" id="resetBtn">Reset 1</button>
     </div>
 
     <script>
@@ -170,7 +170,7 @@
             if (score === 0) {
                 score = 1;
             } else {
-                score += score * 0.01;
+                score += score * 1.0;
             }
             
             resetPercentage++;
