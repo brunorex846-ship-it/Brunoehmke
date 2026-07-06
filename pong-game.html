@@ -417,8 +417,19 @@
 
         // Hook up difficulty buttons
         const difficultyButtons = document.querySelectorAll('.difficulty-btn');
+
+        // Helper to enable/disable difficulty controls while the game is running
+        function setDifficultyControlsEnabled(enabled) {
+            difficultyButtons.forEach(btn => {
+                btn.disabled = !enabled;
+                btn.style.opacity = enabled ? '1' : '0.6';
+                btn.style.pointerEvents = enabled ? 'auto' : 'none';
+            });
+        }
+
         difficultyButtons.forEach(btn => {
             btn.addEventListener('click', () => {
+                if (gameRunning) return; // impede mudança de dificuldade durante a partida
                 // visual
                 difficultyButtons.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
@@ -445,9 +456,14 @@
 
             gameRunning = true;
             startButton.style.display = 'none';
+            // disable difficulty buttons while running
+            setDifficultyControlsEnabled(false);
             // start loop
             animationId = requestAnimationFrame(gameLoop);
         });
+
+        // Initialize difficulty controls enabled (before game starts)
+        setDifficultyControlsEnabled(true);
 
         // Initialize difficulty (padrão já marcado no HTML)
         applyDifficulty(selectedDifficulty);
@@ -460,6 +476,8 @@
                     gameRunning = false;
                     startButton.textContent = 'RETOMAR';
                     startButton.style.display = 'block';
+                    // enable difficulty controls when paused/stopped
+                    setDifficultyControlsEnabled(true);
                 }
             }
         });
