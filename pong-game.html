@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -25,12 +25,18 @@
             flex-direction: column;
             align-items: center;
             gap: 20px;
+            position: relative;
         }
 
         h1 {
             color: #fff;
             text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
             font-size: 2.5em;
+        }
+
+        #canvasWrapper {
+            position: relative;
+            display: inline-block;
         }
 
         #gameCanvas {
@@ -40,25 +46,48 @@
             display: block;
         }
 
+        /* Start button centered over the canvas */
+        #startButton {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(180deg, #ff8c00, #ff4500);
+            color: #fff;
+            border: none;
+            padding: 14px 28px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 6px 18px rgba(255, 69, 0, 0.35);
+        }
+
         .controls {
             display: flex;
             gap: 10px;
-        }
-
-        .start-btn {
-            background: #00b894;
+            align-items: center;
             color: #fff;
-            border: none;
-            padding: 10px 18px;
             font-size: 1em;
-            border-radius: 6px;
-            cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
 
-        .start-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
+        .difficulty-btn {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 2px solid transparent;
+            background: #222;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.12s ease-in-out;
+        }
+
+        .difficulty-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .difficulty-btn.active {
+            background: linear-gradient(180deg, #4caf50, #2e7d32);
+            border-color: #c8f7c5;
+            color: #fff;
         }
 
         .scoreboard {
@@ -105,34 +134,42 @@
             border-radius: 3px;
             font-weight: bold;
         }
+
     </style>
 </head>
 <body>
     <div class="container">
-        <h1> PING PONG </h1>
+        <h1>🏓 PONG GAME 🏓</h1>
 
-        <div class="controls">
-            <button id="startButton" class="start-btn">Start</button>
+        <div class="controls" id="difficultyControls">
+            <label style="color:#fff;">Dificuldade:</label>
+            <button class="difficulty-btn" data-difficulty="easy">Fácil</button>
+            <button class="difficulty-btn active" data-difficulty="medium">Médio</button>
+            <button class="difficulty-btn" data-difficulty="hard">Difícil</button>
+            <button class="difficulty-btn" data-difficulty="insane">Impossível</button>
         </div>
-        
-        <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+        <div id="canvasWrapper">
+            <canvas id="gameCanvas" width="800" height="400"></canvas>
+            <button id="startButton">INICIAR</button>
+        </div>
 
         <div class="scoreboard">
             <div class="score-section">
-                <h2>Player (Left)</h2>
+                <h2>Jogador (Esquerda)</h2>
                 <div class="score" id="playerScore">0</div>
             </div>
             <div class="score-section">
-                <h2>Computer (Right)</h2>
+                <h2>Computador (Direita)</h2>
                 <div class="score" id="computerScore">0</div>
             </div>
         </div>
 
         <div class="instructions">
-            <p><strong>Controls:</strong></p>
-            <p>Move Left Paddle: <span class="key">↑</span> <span class="key">↓</span> Arrow Keys or <span class="key">Mouse</span></p>
-            <p>The right paddle is controlled by the computer AI</p>
-            <p><strong>Objective:</strong> Score points by making the ball pass the opponent's paddle!</p>
+            <p><strong>Controles:</strong></p>
+            <p>Move o Paddle Esquerdo: <span class="key">↑</span> <span class="key">↓</span> ou com o <span class="key">Mouse</span></p>
+            <p>O paddle direito é controlado pela IA do computador</p>
+            <p><strong>Objetivo:</strong> Faça a bola passar pelo paddle do oponente para marcar pontos!</p>
         </div>
     </div>
 
@@ -161,6 +198,7 @@
             width: paddleWidth,
             height: paddleHeight,
             speed: 4,
+            reaction: 35, // distância antes de reagir (quanto menor = mais difícil)
             score: 0
         };
 
@@ -172,6 +210,32 @@
             size: ballSize,
             speed: 5
         };
+
+        // Difficulty configurations (4 níveis)
+        const difficulties = {
+            easy:   { computerSpeed: 3, computerReaction: 60, ballSpeed: 4, playerSpeed: 9 },
+            medium: { computerSpeed: 4, computerReaction: 35, ballSpeed: 5, playerSpeed: 7 },
+            hard:   { computerSpeed: 6, computerReaction: 20, ballSpeed: 6, playerSpeed: 6 },
+            insane: { computerSpeed: 8, computerReaction: 8,  ballSpeed: 7, playerSpeed: 6 }
+        };
+
+        let selectedDifficulty = 'medium';
+        let gameRunning = false;
+        let animationId = null;
+
+        function applyDifficulty(level) {
+            const d = difficulties[level] || difficulties.medium;
+            computer.speed = d.computerSpeed;
+            computer.reaction = d.computerReaction;
+            ball.speed = d.ballSpeed;
+            player.speed = d.playerSpeed;
+
+            // Ajusta a velocidade atual da bola mantendo a direção
+            const signX = Math.sign(ball.dx) || (Math.random() > 0.5 ? 1 : -1);
+            const signY = Math.sign(ball.dy) || (Math.random() > 0.5 ? 1 : -1);
+            ball.dx = signX * ball.speed;
+            ball.dy = signY * Math.min(Math.abs(ball.dy) || ball.speed * 0.5, ball.speed * 0.8);
+        }
 
         // Input handling
         const keys = {};
@@ -200,7 +264,7 @@
                 player.y += player.speed;
             }
 
-            // Mouse control (mouse has priority)
+            // Mouse control (override)
             if (mouseY - player.height / 2 < 0) {
                 player.y = 0;
             } else if (mouseY + player.height / 2 > canvas.height) {
@@ -215,10 +279,10 @@
             const computerCenter = computer.y + computer.height / 2;
             const ballCenter = ball.y;
 
-            // Simple AI: follow the ball
-            if (computerCenter < ballCenter - 35) {
+            // AI: segue a bola, com uma "zona morta" determinada por computer.reaction
+            if (computerCenter < ballCenter - computer.reaction) {
                 computer.y += computer.speed;
-            } else if (computerCenter > ballCenter + 35) {
+            } else if (computerCenter > ballCenter + computer.reaction) {
                 computer.y -= computer.speed;
             }
 
@@ -241,7 +305,7 @@
                 ball.y = Math.max(ball.size, Math.min(canvas.height - ball.size, ball.y));
             }
 
-            // Ball collision with paddles
+            // Ball collision with player paddle
             if (
                 ball.x - ball.size < player.x + player.width &&
                 ball.y > player.y &&
@@ -254,6 +318,7 @@
                 ball.dy = hitPos * ball.speed;
             }
 
+            // Ball collision with computer paddle
             if (
                 ball.x + ball.size > computer.x &&
                 ball.y > computer.y &&
@@ -281,8 +346,9 @@
         function resetBall() {
             ball.x = canvas.width / 2;
             ball.y = canvas.height / 2;
+            // Usa ball.speed para ajustar intensidade
             ball.dx = (Math.random() > 0.5 ? 1 : -1) * ball.speed;
-            ball.dy = (Math.random() - 0.5) * ball.speed;
+            ball.dy = (Math.random() - 0.5) * ball.speed * 0.6;
         }
 
         // Draw functions
@@ -338,36 +404,66 @@
             document.getElementById('computerScore').textContent = computer.score;
         }
 
-        // Game control
-        let gameRunning = false;
-        const startButton = document.getElementById('startButton');
-
-        function startGame() {
-            if (!gameRunning) {
-                gameRunning = true;
-                startButton.disabled = true;
-                // ensure ball is centered when starting
-                resetBall();
-                requestAnimationFrame(gameLoop);
-            }
-        }
-
-        startButton.addEventListener('click', startGame);
-
         // Main game loop
         function gameLoop() {
-            if (!gameRunning) return;
-
+            if (!gameRunning) return; // segurança
             updatePlayer();
             updateComputer();
             updateBall();
             updateScore();
             draw();
-
-            requestAnimationFrame(gameLoop);
+            animationId = requestAnimationFrame(gameLoop);
         }
 
-        // Note: the game will start only after the user clicks the Start button
+        // Hook up difficulty buttons
+        const difficultyButtons = document.querySelectorAll('.difficulty-btn');
+        difficultyButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // visual
+                difficultyButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedDifficulty = btn.dataset.difficulty;
+                applyDifficulty(selectedDifficulty);
+            });
+        });
+
+        // Start button
+        const startButton = document.getElementById('startButton');
+        startButton.addEventListener('click', () => {
+            if (gameRunning) return;
+            // reset scores and positions
+            player.score = 0;
+            computer.score = 0;
+            player.y = canvas.height / 2 - player.height / 2;
+            computer.y = canvas.height / 2 - computer.height / 2;
+            resetBall();
+
+            applyDifficulty(selectedDifficulty);
+
+            document.getElementById('playerScore').textContent = player.score;
+            document.getElementById('computerScore').textContent = computer.score;
+
+            gameRunning = true;
+            startButton.style.display = 'none';
+            // start loop
+            animationId = requestAnimationFrame(gameLoop);
+        });
+
+        // Initialize difficulty (padrão já marcado no HTML)
+        applyDifficulty(selectedDifficulty);
+
+        // Allow showing start button again when pressing Escape (opcional)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                // pause
+                if (gameRunning) {
+                    gameRunning = false;
+                    startButton.textContent = 'RETOMAR';
+                    startButton.style.display = 'block';
+                }
+            }
+        });
+
     </script>
 </body>
 </html>
