@@ -322,8 +322,7 @@
             draw();
 
             requestAnimationFrame(gameLoop);
-        }
-        {function createParticles(x, y, color, amount = 10) {
+    function createParticles(x, y, color, amount = 10) {
     for (let i = 0; i < amount; i++) {
         particles.push({
             x,
@@ -336,20 +335,36 @@
         });
     }
 }
-         {function updateParticles() {
+
+function updateParticles() {
     for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
 
         p.x += p.dx;
         p.y += p.dy;
-
         p.alpha -= 0.02;
 
         if (p.alpha <= 0) {
             particles.splice(i, 1);
         }
     }
-}}
+}
+
+function drawParticles() {
+    particles.forEach(p => {
+        ctx.save();
+
+        ctx.globalAlpha = p.alpha;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+
+        ctx.fillStyle = p.color;
+        ctx.fill();
+
+        ctx.restore();
+    });
+}
 
         // Start the game
         gameLoop();
