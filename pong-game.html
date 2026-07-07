@@ -228,6 +228,10 @@
         let originalPlayerSpeed = player.speed;
         let originalBallSpeed = ball.speed;
 
+        // HUD for active effects per side
+        const durations = { yellow: 4000, blue: 1000, green: 3000 };
+        const activeHUDs = { player: null, computer: null }; // { type, expire }
+
         // Difficulty configurations (4 níveis)
         const difficulties = {
             easy:   { computerSpeed: 3, computerReaction: 60, ballSpeed: 4, playerSpeed: 9 },
@@ -425,6 +429,48 @@
             });
         }
 
+        // Draw HUD for active effects
+        function drawHUD() {
+            const now = Date.now();
+            ctx.save();
+            ctx.font = '14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Player HUD (left)
+            const ph = activeHUDs.player;
+            if (ph && ph.expire > now) {
+                const leftX = 100; // near left score
+                const leftY = 40;
+                // background
+                ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                ctx.fillRect(leftX - 60, leftY - 18, 120, 28);
+                // icon
+                ctx.fillStyle = '#fff';
+                const symbol = ph.type === 'yellow' ? '⚡' : ph.type === 'blue' ? '❄' : '🐢';
+                ctx.fillText(symbol, leftX - 30, leftY);
+                // text + time
+                const remaining = Math.ceil((ph.expire - now) / 1000 * 10) / 10; // 0.1s precision
+                ctx.fillText(`${remaining}s`, leftX + 20, leftY);
+            }
+
+            // Computer HUD (right)
+            const ch = activeHUDs.computer;
+            if (ch && ch.expire > now) {
+                const rightX = canvas.width - 100; // near right score
+                const rightY = 40;
+                ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                ctx.fillRect(rightX - 60, rightY - 18, 120, 28);
+                ctx.fillStyle = '#fff';
+                const symbol = ch.type === 'yellow' ? '⚡' : ch.type === 'blue' ? '❄' : '🐢';
+                ctx.fillText(symbol, rightX - 30, rightY);
+                const remaining = Math.ceil((ch.expire - now) / 1000 * 10) / 10;
+                ctx.fillText(`${remaining}s`, rightX + 20, rightY);
+            }
+
+            ctx.restore();
+        }
+
         function drawCenterLine() {
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.setLineDash([5, 5]);
@@ -453,6 +499,9 @@
 
             // Draw power-ups
             drawPowerUps();
+
+            // Draw HUD (power-up icons + remaining time)
+            drawHUD();
         }
 
         function updateScore() {
@@ -519,13 +568,20 @@
             // restore ball
             if (activeBallTimer) { clearTimeout(activeBallTimer); activeBallTimer = null; }
             ball.speed = originalBallSpeed;
+            // clear HUDs
+            activeHUDs.player = null;
+            activeHUDs.computer = null;
         }
 
         function applyPowerUp(type, target) {
             // type: 'yellow'|'blue'|'green'
             // target: 'player' or 'computer' (who will receive the effect)
+            const duration = durations[type] || 1000;
+            // set HUD
+            activeHUDs[target] = { type, expire: Date.now() + duration };
+
             if (type === 'yellow') {
-                // increase ball speed temporarily (4s)
+                // increase ball speed temporarily (duration)
                 if (activeBallTimer) clearTimeout(activeBallTimer);
                 const factor = 1.6;
                 ball.speed = Math.max(1, ball.speed * factor);
@@ -542,29 +598,32 @@
                     ball.dx = sX * Math.max(1, originalBallSpeed);
                     ball.dy = sY * Math.min(Math.abs(ball.dy), originalBallSpeed * 0.8);
                     activeBallTimer = null;
-                }, 4000);
-
-                // (optional) visual feedback could indicate who got hit - currently global
+                    // clear HUD for both sides (yellow is global)
+                    activeHUDs.player = null;
+                    activeHUDs.computer = null;
+                }, duration);
 
             } else if (type === 'blue') {
-                // freeze target for 1s
+                // freeze target for duration
                 if (target === 'computer') {
                     if (activeComputerTimer) clearTimeout(activeComputerTimer);
                     computerFrozen = true;
                     activeComputerTimer = setTimeout(() => {
                         computerFrozen = false;
                         activeComputerTimer = null;
-                    }, 1000);
+                        activeHUDs.computer = null;
+                    }, duration);
                 } else {
                     if (activePlayerTimer) clearTimeout(activePlayerTimer);
                     playerFrozen = true;
                     activePlayerTimer = setTimeout(() => {
                         playerFrozen = false;
                         activePlayerTimer = null;
-                    }, 1000);
+                        activeHUDs.player = null;
+                    }, duration);
                 }
             } else if (type === 'green') {
-                // slow target for 3s
+                // slow target for duration
                 const slowFactor = 0.5;
                 if (target === 'computer') {
                     if (activeComputerTimer) clearTimeout(activeComputerTimer);
@@ -572,14 +631,16 @@
                     activeComputerTimer = setTimeout(() => {
                         computer.speed = originalComputerSpeed;
                         activeComputerTimer = null;
-                    }, 3000);
+                        activeHUDs.computer = null;
+                    }, duration);
                 } else {
                     if (activePlayerTimer) clearTimeout(activePlayerTimer);
                     player.speed = Math.max(0.25, originalPlayerSpeed * slowFactor);
                     activePlayerTimer = setTimeout(() => {
                         player.speed = originalPlayerSpeed;
                         activePlayerTimer = null;
-                    }, 3000);
+                        activeHUDs.player = null;
+                    }, duration);
                 }
             }
         }
