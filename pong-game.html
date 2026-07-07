@@ -211,6 +211,18 @@
             speed: 5
         };
 
+        // Power-ups: yellow (speed boost), blue (freeze enemy 1s), green (slow enemy 3s)
+        const powerUps = [];
+        const powerUpRadius = 12;
+        let powerUpSpawnTimer = null;
+        let powerUpLoopActive = false;
+
+        // Active effect timers to restore states
+        let activeComputerTimer = null;
+        let activeBallTimer = null;
+        let originalComputerSpeed = computer.speed;
+        let originalBallSpeed = ball.speed;
+
         // Difficulty configurations (4 níveis)
         const difficulties = {
             easy:   { computerSpeed: 3, computerReaction: 60, ballSpeed: 4, playerSpeed: 9 },
@@ -229,6 +241,9 @@
             computer.reaction = d.computerReaction;
             ball.speed = d.ballSpeed;
             player.speed = d.playerSpeed;
+
+            originalComputerSpeed = computer.speed;
+            originalBallSpeed = ball.speed;
 
             // Ajusta a velocidade atual da bola mantendo a direção
             const signX = Math.sign(ball.dx) || (Math.random() > 0.5 ? 1 : -1);
@@ -275,7 +290,9 @@
         }
 
         // Update computer paddle position (AI)
+        let computerFrozen = false;
         function updateComputer() {
+            if (computerFrozen) return;
             const computerCenter = computer.y + computer.height / 2;
             const ballCenter = ball.y;
 
@@ -340,6 +357,9 @@
                 player.score++;
                 resetBall();
             }
+
+            // Check collision with power-ups
+            checkPowerUpCollisions();
         }
 
         // Reset ball to center
@@ -372,6 +392,28 @@
             ctx.stroke();
         }
 
+        function drawPowerUps() {
+            powerUps.forEach(p => {
+                ctx.beginPath();
+                ctx.fillStyle = p.type === 'yellow' ? '#ffd700' : p.type === 'blue' ? '#1e90ff' : '#39e600';
+                ctx.arc(p.x, p.y, powerUpRadius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // draw symbol
+                ctx.fillStyle = '#000';
+                ctx.font = '16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const symbol = p.type === 'yellow' ? '⚡' : p.type === 'blue' ? '❄' : '🐢';
+                ctx.fillText(symbol, p.x, p.y + 1);
+
+                // small glow
+                ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+        }
+
         function drawCenterLine() {
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.setLineDash([5, 5]);
@@ -397,11 +439,101 @@
 
             // Draw ball
             drawBall(ball.x, ball.y, ball.size);
+
+            // Draw power-ups
+            drawPowerUps();
         }
 
         function updateScore() {
             document.getElementById('playerScore').textContent = player.score;
             document.getElementById('computerScore').textContent = computer.score;
+        }
+
+        // Power-up spawning
+        function spawnPowerUp() {
+            if (!gameRunning) return;
+            // choose random type
+            const types = ['yellow', 'blue', 'green'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            // random position, keep some margin
+            const margin = 60;
+            const x = Math.random() * (canvas.width - margin * 2) + margin;
+            const y = Math.random() * (canvas.height - margin * 2) + margin;
+            powerUps.push({ x, y, type });
+            // schedule next spawn
+            scheduleNextPowerUp();
+        }
+
+        function scheduleNextPowerUp() {
+            // spawn every 4-8 seconds
+            const interval = 4000 + Math.random() * 4000;
+            if (powerUpSpawnTimer) clearTimeout(powerUpSpawnTimer);
+            powerUpSpawnTimer = setTimeout(() => {
+                if (gameRunning) spawnPowerUp();
+            }, interval);
+        }
+
+        function clearAllPowerUps() {
+            powerUps.length = 0;
+            if (powerUpSpawnTimer) { clearTimeout(powerUpSpawnTimer); powerUpSpawnTimer = null; }
+        }
+
+        function checkPowerUpCollisions() {
+            for (let i = powerUps.length - 1; i >= 0; i--) {
+                const p = powerUps[i];
+                const dx = ball.x - p.x;
+                const dy = ball.y - p.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < ball.size + powerUpRadius) {
+                    // collect
+                    applyPowerUp(p.type);
+                    powerUps.splice(i, 1);
+                }
+            }
+        }
+
+        function applyPowerUp(type) {
+            // clear previous timers affecting same resource
+            if (type === 'yellow') {
+                if (activeBallTimer) clearTimeout(activeBallTimer);
+                // increase ball speed temporarily (4s)
+                const factor = 1.6;
+                ball.speed = Math.max(1, ball.speed * factor);
+                // adjust dx/dy preserving direction
+                const signX = Math.sign(ball.dx) || 1;
+                const signY = Math.sign(ball.dy) || 1;
+                ball.dx = signX * Math.max(1, Math.abs(ball.dx) * factor);
+                ball.dy = signY * Math.max(1, Math.abs(ball.dy) * factor);
+
+                activeBallTimer = setTimeout(() => {
+                    // restore ball speed to original difficulty value
+                    ball.speed = originalBallSpeed;
+                    const sX = Math.sign(ball.dx) || 1;
+                    const sY = Math.sign(ball.dy) || 1;
+                    ball.dx = sX * Math.max(1, originalBallSpeed);
+                    ball.dy = sY * Math.min(Math.abs(ball.dy), originalBallSpeed * 0.8);
+                    activeBallTimer = null;
+                }, 4000);
+            } else if (type === 'blue') {
+                // freeze enemy for 1s
+                if (activeComputerTimer) clearTimeout(activeComputerTimer);
+                computerFrozen = true;
+                // visual cue: set speed to 0 but remember original
+                // originalComputerSpeed already stored
+                activeComputerTimer = setTimeout(() => {
+                    computerFrozen = false;
+                    activeComputerTimer = null;
+                }, 1000);
+            } else if (type === 'green') {
+                // slow enemy for 3s
+                if (activeComputerTimer) clearTimeout(activeComputerTimer);
+                const slowFactor = 0.5;
+                computer.speed = Math.max(0.5, originalComputerSpeed * slowFactor);
+                activeComputerTimer = setTimeout(() => {
+                    computer.speed = originalComputerSpeed;
+                    activeComputerTimer = null;
+                }, 3000);
+            }
         }
 
         // Main game loop
@@ -458,6 +590,13 @@
             startButton.style.display = 'none';
             // disable difficulty buttons while running
             setDifficultyControlsEnabled(false);
+
+            // start power-up spawn loop
+            if (!powerUpLoopActive) {
+                powerUpLoopActive = true;
+                scheduleNextPowerUp();
+            }
+
             // start loop
             animationId = requestAnimationFrame(gameLoop);
         });
@@ -478,6 +617,8 @@
                     startButton.style.display = 'block';
                     // enable difficulty controls when paused/stopped
                     setDifficultyControlsEnabled(true);
+                    // pause power-up spawning
+                    if (powerUpSpawnTimer) { clearTimeout(powerUpSpawnTimer); powerUpSpawnTimer = null; }
                 }
             }
         });
