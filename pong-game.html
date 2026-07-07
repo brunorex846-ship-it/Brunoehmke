@@ -211,16 +211,21 @@
             speed: 5
         };
 
-        // Power-ups: yellow (speed boost), blue (freeze enemy 1s), green (slow enemy 3s)
+        // Track who last hit the ball: 'player' or 'computer'
+        let lastHitter = null;
+
+        // Power-ups: yellow (speed boost), blue (freeze target 1s), green (slow target 3s)
         const powerUps = [];
         const powerUpRadius = 12;
         let powerUpSpawnTimer = null;
         let powerUpLoopActive = false;
 
-        // Active effect timers to restore states
+        // Active effect timers to restore states (separate for player and computer)
         let activeComputerTimer = null;
+        let activePlayerTimer = null;
         let activeBallTimer = null;
         let originalComputerSpeed = computer.speed;
+        let originalPlayerSpeed = player.speed;
         let originalBallSpeed = ball.speed;
 
         // Difficulty configurations (4 níveis)
@@ -243,6 +248,7 @@
             player.speed = d.playerSpeed;
 
             originalComputerSpeed = computer.speed;
+            originalPlayerSpeed = player.speed;
             originalBallSpeed = ball.speed;
 
             // Ajusta a velocidade atual da bola mantendo a direção
@@ -270,7 +276,10 @@
         });
 
         // Update player paddle position
+        let playerFrozen = false;
         function updatePlayer() {
+            if (playerFrozen) return; // frozen: ignore input/mouse
+
             // Keyboard controls
             if (keys['ArrowUp'] && player.y > 0) {
                 player.y -= player.speed;
@@ -333,6 +342,7 @@
                 // Add spin based on where ball hits paddle
                 const hitPos = (ball.y - (player.y + player.height / 2)) / (player.height / 2);
                 ball.dy = hitPos * ball.speed;
+                lastHitter = 'player';
             }
 
             // Ball collision with computer paddle
@@ -346,6 +356,7 @@
                 // Add spin based on where ball hits paddle
                 const hitPos = (ball.y - (computer.y + computer.height / 2)) / (computer.height / 2);
                 ball.dy = hitPos * ball.speed;
+                lastHitter = 'computer';
             }
 
             // Ball out of bounds (scoring)
@@ -485,18 +496,37 @@
                 const dy = ball.y - p.y;
                 const dist = Math.sqrt(dx*dx + dy*dy);
                 if (dist < ball.size + powerUpRadius) {
-                    // collect
-                    applyPowerUp(p.type);
+                    // collect: determine target (opponent of last hitter)
+                    let target = 'computer';
+                    if (lastHitter === 'player') target = 'computer';
+                    else if (lastHitter === 'computer') target = 'player';
+                    // default if lastHitter is null -> target remains 'computer'
+                    applyPowerUp(p.type, target);
                     powerUps.splice(i, 1);
                 }
             }
         }
 
-        function applyPowerUp(type) {
-            // clear previous timers affecting same resource
+        function clearActiveEffects() {
+            // restore computer
+            if (activeComputerTimer) { clearTimeout(activeComputerTimer); activeComputerTimer = null; }
+            computerFrozen = false;
+            computer.speed = originalComputerSpeed;
+            // restore player
+            if (activePlayerTimer) { clearTimeout(activePlayerTimer); activePlayerTimer = null; }
+            playerFrozen = false;
+            player.speed = originalPlayerSpeed;
+            // restore ball
+            if (activeBallTimer) { clearTimeout(activeBallTimer); activeBallTimer = null; }
+            ball.speed = originalBallSpeed;
+        }
+
+        function applyPowerUp(type, target) {
+            // type: 'yellow'|'blue'|'green'
+            // target: 'player' or 'computer' (who will receive the effect)
             if (type === 'yellow') {
-                if (activeBallTimer) clearTimeout(activeBallTimer);
                 // increase ball speed temporarily (4s)
+                if (activeBallTimer) clearTimeout(activeBallTimer);
                 const factor = 1.6;
                 ball.speed = Math.max(1, ball.speed * factor);
                 // adjust dx/dy preserving direction
@@ -506,7 +536,6 @@
                 ball.dy = signY * Math.max(1, Math.abs(ball.dy) * factor);
 
                 activeBallTimer = setTimeout(() => {
-                    // restore ball speed to original difficulty value
                     ball.speed = originalBallSpeed;
                     const sX = Math.sign(ball.dx) || 1;
                     const sY = Math.sign(ball.dy) || 1;
@@ -514,25 +543,44 @@
                     ball.dy = sY * Math.min(Math.abs(ball.dy), originalBallSpeed * 0.8);
                     activeBallTimer = null;
                 }, 4000);
+
+                // (optional) visual feedback could indicate who got hit - currently global
+
             } else if (type === 'blue') {
-                // freeze enemy for 1s
-                if (activeComputerTimer) clearTimeout(activeComputerTimer);
-                computerFrozen = true;
-                // visual cue: set speed to 0 but remember original
-                // originalComputerSpeed already stored
-                activeComputerTimer = setTimeout(() => {
-                    computerFrozen = false;
-                    activeComputerTimer = null;
-                }, 1000);
+                // freeze target for 1s
+                if (target === 'computer') {
+                    if (activeComputerTimer) clearTimeout(activeComputerTimer);
+                    computerFrozen = true;
+                    activeComputerTimer = setTimeout(() => {
+                        computerFrozen = false;
+                        activeComputerTimer = null;
+                    }, 1000);
+                } else {
+                    if (activePlayerTimer) clearTimeout(activePlayerTimer);
+                    playerFrozen = true;
+                    activePlayerTimer = setTimeout(() => {
+                        playerFrozen = false;
+                        activePlayerTimer = null;
+                    }, 1000);
+                }
             } else if (type === 'green') {
-                // slow enemy for 3s
-                if (activeComputerTimer) clearTimeout(activeComputerTimer);
+                // slow target for 3s
                 const slowFactor = 0.5;
-                computer.speed = Math.max(0.5, originalComputerSpeed * slowFactor);
-                activeComputerTimer = setTimeout(() => {
-                    computer.speed = originalComputerSpeed;
-                    activeComputerTimer = null;
-                }, 3000);
+                if (target === 'computer') {
+                    if (activeComputerTimer) clearTimeout(activeComputerTimer);
+                    computer.speed = Math.max(0.25, originalComputerSpeed * slowFactor);
+                    activeComputerTimer = setTimeout(() => {
+                        computer.speed = originalComputerSpeed;
+                        activeComputerTimer = null;
+                    }, 3000);
+                } else {
+                    if (activePlayerTimer) clearTimeout(activePlayerTimer);
+                    player.speed = Math.max(0.25, originalPlayerSpeed * slowFactor);
+                    activePlayerTimer = setTimeout(() => {
+                        player.speed = originalPlayerSpeed;
+                        activePlayerTimer = null;
+                    }, 3000);
+                }
             }
         }
 
@@ -580,6 +628,11 @@
             player.y = canvas.height / 2 - player.height / 2;
             computer.y = canvas.height / 2 - computer.height / 2;
             resetBall();
+
+            // clear any active effects from previous rounds
+            clearActiveEffects();
+            clearAllPowerUps();
+            lastHitter = null;
 
             applyDifficulty(selectedDifficulty);
 
