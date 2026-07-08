@@ -62,6 +62,65 @@
             box-shadow: 0 6px 18px rgba(255, 69, 0, 0.35);
         }
 
+        /* Pause controls container */
+        #pauseControls {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            gap: 20px;
+            z-index: 10;
+        }
+
+        #pauseControls.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .pause-button {
+            background: linear-gradient(180deg, #ff8c00, #ff4500);
+            color: #fff;
+            border: none;
+            padding: 14px 28px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 6px 18px rgba(255, 69, 0, 0.35);
+            transition: all 0.2s ease-in-out;
+        }
+
+        .pause-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 24px rgba(255, 69, 0, 0.5);
+        }
+
+        .pause-button:active {
+            transform: scale(0.98);
+        }
+
+        .reset-button {
+            background: linear-gradient(180deg, #ff6b6b, #ee5a6f);
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            font-size: 0.95em;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+            transition: all 0.2s ease-in-out;
+        }
+
+        .reset-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 18px rgba(255, 107, 107, 0.5);
+        }
+
+        .reset-button:active {
+            transform: scale(0.98);
+        }
+
         .controls {
             display: flex;
             gap: 10px;
@@ -152,6 +211,10 @@
         <div id="canvasWrapper">
             <canvas id="gameCanvas" width="800" height="400"></canvas>
             <button id="startButton">INICIAR</button>
+            <div id="pauseControls">
+                <button class="pause-button" id="resumeButton">RETOMAR (ESC)</button>
+                <button class="reset-button" id="resetButton">↺ RECOMEÇAR</button>
+            </div>
         </div>
 
         <div class="scoreboard">
@@ -679,8 +742,65 @@
             });
         });
 
-        // Start button
+        // Pause controls
         const startButton = document.getElementById('startButton');
+        const pauseControls = document.getElementById('pauseControls');
+        const resumeButton = document.getElementById('resumeButton');
+        const resetButton = document.getElementById('resetButton');
+
+        // Function to stop the game and show pause menu
+        function pauseGame() {
+            if (gameRunning) {
+                gameRunning = false;
+                pauseControls.classList.add('active');
+                startButton.style.display = 'none';
+                setDifficultyControlsEnabled(true);
+                if (powerUpSpawnTimer) { clearTimeout(powerUpSpawnTimer); powerUpSpawnTimer = null; }
+            }
+        }
+
+        // Function to resume the game
+        function resumeGame() {
+            if (!gameRunning) {
+                gameRunning = true;
+                pauseControls.classList.remove('active');
+                if (!powerUpLoopActive) {
+                    powerUpLoopActive = true;
+                    scheduleNextPowerUp();
+                }
+                animationId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // Function to reset the game
+        function resetGame() {
+            gameRunning = false;
+            pauseControls.classList.remove('active');
+            startButton.style.display = 'block';
+            setDifficultyControlsEnabled(true);
+
+            // Reset scores and positions
+            player.score = 0;
+            computer.score = 0;
+            player.y = canvas.height / 2 - player.height / 2;
+            computer.y = canvas.height / 2 - computer.height / 2;
+            resetBall();
+
+            // Clear any active effects
+            clearActiveEffects();
+            clearAllPowerUps();
+            lastHitter = null;
+            powerUpLoopActive = false;
+
+            // Update UI
+            document.getElementById('playerScore').textContent = player.score;
+            document.getElementById('computerScore').textContent = computer.score;
+
+            // Draw initial state
+            draw();
+        }
+
+        // Start button
         startButton.addEventListener('click', () => {
             if (gameRunning) return;
             // reset scores and positions
@@ -702,6 +822,7 @@
 
             gameRunning = true;
             startButton.style.display = 'none';
+            pauseControls.classList.remove('active');
             // disable difficulty buttons while running
             setDifficultyControlsEnabled(false);
 
@@ -715,24 +836,28 @@
             animationId = requestAnimationFrame(gameLoop);
         });
 
+        // Resume button
+        resumeButton.addEventListener('click', resumeGame);
+
+        // Reset button
+        resetButton.addEventListener('click', resetGame);
+
         // Initialize difficulty controls enabled (before game starts)
         setDifficultyControlsEnabled(true);
 
         // Initialize difficulty (padrão já marcado no HTML)
         applyDifficulty(selectedDifficulty);
 
-        // Allow showing start button again when pressing Escape (opcional)
+        // Initial draw
+        draw();
+
+        // Allow pausing/resuming with Escape key
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                // pause
                 if (gameRunning) {
-                    gameRunning = false;
-                    startButton.textContent = 'RETOMAR';
-                    startButton.style.display = 'block';
-                    // enable difficulty controls when paused/stopped
-                    setDifficultyControlsEnabled(true);
-                    // pause power-up spawning
-                    if (powerUpSpawnTimer) { clearTimeout(powerUpSpawnTimer); powerUpSpawnTimer = null; }
+                    pauseGame();
+                } else if (pauseControls.classList.contains('active')) {
+                    resumeGame();
                 }
             }
         });
